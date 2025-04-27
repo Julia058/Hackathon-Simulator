@@ -1,0 +1,1330 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulació de Pèndol Interactiva</title>
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            min-height: 100vh;
+            background-color: #e0e0e0;
+            overflow-y: auto;
+            font-family: 'Arial', sans-serif;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+
+        #mainSimulationArea {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-bottom: 25px; /* Space below the main simulation area */
+            width: 100%;
+            max-width: 950px;
+        }
+
+
+        @media (min-width: 768px) {
+            #mainSimulationArea {
+                flex-direction: row;
+                align-items: flex-start;
+                justify-content: center;
+            }
+             #pendulumCanvas {
+                 margin-right: 25px;
+                 margin-bottom: 0; /* Canvas already has margin-bottom, override for layout */
+             }
+             #controlsContainer {
+                 margin-bottom: 0;
+                 flex-shrink: 0;
+             }
+        }
+
+
+        canvas {
+            border-radius: 12px;
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15), 0 8px 20px rgba(0, 0, 0, 0.1);
+            /* margin-bottom: 25px; Removed general canvas margin-bottom */
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+
+         #pendulumCanvas {
+             background-color: #1a2a3a;
+             margin-bottom: 25px; /* Add margin-bottom specifically to pendulum canvas */
+         }
+
+
+
+
+         #graphCanvas, #kineticEnergyCanvas, #potentialEnergyCanvas {
+            background-color: #FFFFFF;
+            width: 90%;
+            max-width: 500px;
+            height: 200px;
+            margin-bottom: 25px; /* Ensure spacing below graphs */
+            margin-top: 0; /* Ensure no extra margin-top from .control-group or other rules */
+         }
+
+
+
+
+        canvas:hover {
+            transform: scale(1.01);
+            box-shadow: 0 8px 10px rgba(0, 0, 0, 0.2), 10px 25px rgba(0, 0, 0, 0.15);
+        }
+
+
+        #controlsContainer {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            border-radius: 15px;
+            background-color: #fff;
+            box-shadow: 0 4 lệ4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            width: 90%;
+            max-width: 300px;
+        }
+
+
+        #controlsContainer h2 {
+            margin-top: 0;
+            color: #333;
+            font-size: 1.3em;
+            margin-bottom: 15px;
+        }
+
+
+        #controlsContainer h3 { /* Style for new h3 */
+            margin-top: 5px;
+            margin-bottom: 10px;
+            color: #555;
+            font-size: 1em;
+            text-align: center;
+            width: 100%;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+        }
+
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            margin-bottom: 15px;
+            align-items: flex-start;
+            width: 100%;
+        }
+
+
+        .control-group label {
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+            font-size: 0.9em;
+            transition: color 0.3s ease;
+        }
+
+
+        .control-group label:hover {
+            color: #333;
+        }
+
+
+        .control-group input {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            width: calc(100% - 18px);
+            font-size: 0.9em;
+            transition: border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+
+        .control-group input:focus {
+            outline: none;
+            border-color: #4CAF50;
+            box-shadow: 0 2px 5px rgba(76, 175, 80, 0.2);
+        }
+
+
+        /* Control Buttons Container (Play/Pause, Reset) */
+        #controlButtons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 5px;
+            margin-bottom: 15px;
+            width: 100%; /* Ensure buttons container takes full width */
+        }
+
+
+        #controlButtons button {
+            /* Adjusted styles for rectangular buttons with text */
+            padding: 10px 15px; /* Add padding */
+            border: none;
+            border-radius: 7px; /* Slightly rounded corners */
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+            width: auto; /* Auto width based on content */
+            flex-grow: 1; /* Allow buttons to grow and share space */
+            max-width: 130px; /* Optional: set a max width if flex-grow makes them too wide */
+            display: flex; /* Still use flex for text centering */
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            color: white; /* Text color */
+            font-size: 0.9em; /* Font size */
+            font-weight: bold; /* Bold text */
+            text-transform: uppercase; /* Uppercase text */
+        }
+
+
+        #controlButtons button:hover {
+             transform: scale(1.03); /* Slightly less scale effect for rectangles */
+        }
+
+
+         #controlButtons button:active {
+            transform: scale(0.98); /* Slightly less scale effect for rectangles */
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+         }
+
+
+        /* Specific button colors */
+        #resetButton {
+            background-color: #4CAF50; /* Green */
+        }
+
+
+        /* Play/Pause button colors based on state */
+        #playPauseButton.paused {
+            background-color: #dc3545; /* Red */
+        }
+
+
+        #playPauseButton.running {
+            background-color: #28a745; /* Green - Adjusted for 'Parar' state */
+        }
+
+
+        /* New Info Button Styles */
+        #infoButton {
+            padding: 10px 20px; /* Slightly larger padding than control buttons */
+            border: none;
+            border-radius: 7px;
+            cursor: pointer;
+            transition: background-color 0.3s ease, transform 0.2s ease, box-shadow 0.3s ease;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            color: white;
+            font-size: 1em; /* Slightly larger font than control buttons */
+            font-weight: bold;
+            text-transform: uppercase;
+            background-color: #007bff; /* Blue color */
+            margin-top: 0px; /* Space above it */
+            margin-bottom: 25px; /* Space below it, same as graph margin */
+            min-width: 150px; /* Give it a minimum width */
+            text-align: center; /* Center text */
+            width: 90%; /* Match width of graphs/controls on smaller screens */
+            max-width: 500px; /* Match max width of graphs */
+        }
+
+
+        #infoButton:hover {
+            background-color: #0056b3; /* Darker blue on hover */
+            transform: scale(1.03);
+        }
+
+
+         #infoButton:active {
+            transform: scale(0.98);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+         }
+
+
+
+
+        #simulationStatus {
+            margin-top: 0px;
+            margin-bottom: 0px;
+            font-size: 1em;
+            color: #555;
+            font-weight: bold;
+            min-height: 1.2em;
+            text-align: center;
+            width: 100%; /* Make status span full width */
+        }
+
+
+        #simulationStatus.running {
+            color: #218838;
+        }
+
+
+        #simulationStatus.stopped {
+            color: #C82333;
+        }
+
+
+         #simulationStatus.info {
+             color: #007bff;
+         }
+
+
+        /* Estils per a la modal */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.6);
+            transition: background-color 0.3s ease;
+            animation: fadeInBackground 0.3s;
+        }
+
+
+        @keyframes fadeInBackground {
+            from { background-color: rgba(0,0,0,0); }
+            to { background-color: rgba(0,0,0,0.6); }
+        }
+
+
+        .modal-content {
+            background-color: #fff;
+            margin: 8% auto;
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid #bbb;
+            width: 90%;
+            max-width: 600px;
+            position: relative;
+            box-shadow: 0 7px 20px rgba(0,0,0,0.4);
+            animation: fadeIn 0.3s ease-out;
+        }
+
+
+        @keyframes fadeIn {
+            from {opacity: 0; transform: translateY(-40px);}
+            to {opacity: 1; transform: translateY(0);}
+        }
+
+
+         .close-button {
+            position: absolute;
+            top: 12px;
+            right: 15px;
+            color: #aaa;
+            font-size: 32px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: color 0.3s ease;
+        }
+
+
+        .close-button:hover,
+        .close-button:focus {
+            color: #777;
+            text-decoration: none;
+        }
+
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+
+        .modal-header h2 {
+            margin: 0;
+            font-size: 1.6em;
+            color: #333;
+        }
+
+
+        .modal-body {
+            margin-bottom: 20px;
+            font-size: 1.05em;
+            color: #444;
+            line-height: 1.6;
+        }
+
+
+        .modal-body p {
+            margin-bottom: 12px;
+        }
+
+
+         .modal-body ul {
+            list-style-type: disc;
+            padding-left: 25px;
+            margin-top: 5px;
+            margin-bottom: 15px;
+         }
+
+
+        .modal-body li {
+            margin-bottom: 8px;
+        }
+
+
+        .modal-footer {
+            text-align: right;
+            padding-top: 15px;
+            border-top: 1px solid #eee;
+        }
+
+
+        .modal-footer button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 7px;
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+            font-size: 1.1em;
+            transition: background-color 0.3s ease, transform 0.1s ease, box-shadow 0.3s ease;
+        }
+
+
+        .modal-footer button:hover {
+            background-color: #367c39;
+            transform: scale(1.03);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+
+        .modal-footer button:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.3);
+        }
+
+
+    </style>
+</head>
+<body>
+    <div id="mainSimulationArea">
+        <canvas id="pendulumCanvas" width="400" height="400"></canvas>
+        <div id="controlsContainer">
+            <h2>Controls de la Simulació</h2>
+            <div class="control-group">
+                <label for="lengthInput">Longitud de la corda (cm):</label>
+                <input type="number" id="lengthInput" value="150" min="50" max="300" step="1">
+            </div>
+            <div class="control-group">
+                <label for="massInput">Massa de l'objecte (kg):</label>
+                <input type="number" id="massInput" value="1" min="0.1" max="5" step="0.1">
+            </div>
+            <div class="control-group">
+                <label for="angleInput">Angle inicial (graus):</label>
+                <input type="number" id="angleInput" value="45" min="-179" max="179" step="1">
+            </div>
+            <div class="control-group">
+                <label for="dampingInput">Factor d'amortiment:</label>
+                <input type="number" id="dampingInput" value="0.995" min="0.9" max="1" step="0.001">
+            </div>
+             <h3>Força Impulsora Horitzontal</h3> <!-- New section for external force -->
+             <div class="control-group">
+                <label for="forceAmplitudeInput">Amplitud Força (N):</label> <!-- Changed label -->
+                <input type="number" id="forceAmplitudeInput" value="0" min="0" max="20" step="0.1">
+             </div>
+             <div class="control-group">
+                <label for="forceFrequencyInput">Freqüència Força (Hz):</label> <!-- Changed label -->
+                <input type="number" id="forceFrequencyInput" value="0" min="0" max="2" step="0.01"> <!-- Added min/max/step for frequency -->
+             </div>
+
+
+            <div id="controlButtons">
+                 <button id="resetButton" title="Reiniciar Simulació">Reiniciar</button>
+                 <!-- Initial text is "Activar" when paused -->
+                 <button id="playPauseButton" title="Iniciar/Pausar Simulació">Activar</button>
+            </div>
+            <div id="simulationStatus"></div>
+        </div>
+    </div>
+
+
+    <!-- New Info Button Moved Here -->
+    <button id="infoButton" title="Mostra informació sobre la simulació">Informació</button>
+
+
+    <canvas id="graphCanvas" width="320" height="200"></canvas>
+    <canvas id="kineticEnergyCanvas" width="320" height="200"></canvas>
+    <canvas id="potentialEnergyCanvas" width="320" height="200"></canvas>
+    <!-- Optional: Add canvas for Total Energy or Phase Space plot -->
+    <!-- <canvas id="totalEnergyCanvas" width="320" height="200"></canvas> -->
+
+
+
+
+    <div id="infoModal" class="modal">
+        <div class="modal-content">
+            <span class="close-button" id="modalCloseBtn">×</span>
+            <div class="modal-header">
+                <h2>Sobre la Simulació del Pèndol</h2>
+            </div>
+            <div class="modal-body">
+                <p>
+                    Aquesta simulació interactiva mostra el moviment d'un pèndol simple,
+                    un sistema que oscil·la sota l'influència de la gravetat, l'amortiment i una força impulsora horitzontal.
+                </p>
+                <p>
+                    <strong>Com funciona:</strong>
+                </p>
+                <ul>
+                    <li><strong>Longitud de la corda:</strong> Determina la longitud del pèndol. Una corda més llarga té una freqüència natural més baixa.</li>
+                    <li><strong>Massa de l'objecte:</strong> La massa de l'objecte. Afecta la inèrcia i la resposta a les forces.</li>
+                    <li><strong>Angle inicial:</strong> L'angle (en graus) des del qual es deixa anar el pèndol (respecte a la vertical cap avall, positiu a la dreta).</li>
+                    <li><strong>Factor d'amortiment:</strong> Representa la pèrdua d'energia (fricció, aire). Valors més propers a 1 redueixen l'amortiment.</li>
+                     <li><strong>Amplitud Força (N):</strong> La magnitud màxima de la força horitzontal que s'aplica a l'objecte del pèndol. La força varia sinusoidalment amb el temps. Posa-la a 0 per desactivar la força impulsora.</li>
+                    <li><strong>Freqüència Força (Hz):</strong> La freqüència (en Hertz, cicles/segon) amb què varia la força impulsora horitzontal.</li>
+                </ul>
+                <p>
+                    <strong>Ressonància:</strong>
+                </p>
+                 <p>
+                    Un pèndol té una **freqüència natural** a la qual li agrada oscil·lar. Si la freqüència de la **força impulsora** s'acosta a aquesta freqüència natural, el pèndol entrarà en **ressonància**, i l'amplitud de l'oscil·lació es farà molt gran (limitada només per l'amortiment i els límits físics del moviment).
+                 </p>
+                 <p>
+                    La freqüència natural (en Hz) d'un pèndol simple aproximadament és:
+                    **f₀ ≈ 1 / (2π) * √(<span id="g_value"></span> / <span id="l_m_value"></span>)**
+                    on g = <span id="g_value_text"></span> m/s² i L = <span id="l_m_value_text"></span> m.
+                    Calculada amb els valors actuals: **f₀ ≈ <span id="natural_frequency"></span> Hz**.
+                    Prova d'establir la Freqüència Força prop d'aquest valor per observar la ressonància.
+                 </p>
+                <p>
+                    <strong>Gràfics:</strong>
+                </p>
+                <ul>
+                    <li><strong>Amplitud vs Temps:</strong> Mostra com el **desplaçament horitzontal de l'objecte** canvia amb el temps, mesurat en centímetres des de la posició central.</li>
+                    <li><strong>Energia Cinètica vs Temps:</strong> Il·lustra l'energia deguda al moviment.</li>
+                    <li><strong>Energia Potencial vs Temps:</strong> Il·lustra l'energia deguda a la posició.</li>
+                     <li>Observa com les energies es transformen. Amb amortiment i/o força, l'energia total del sistema pot canviar.</li>
+                </ul>
+                 <p>
+                     <strong>Consideracions Científiques:</strong>
+                 </p>
+                 <ul>
+                     <li>Aquesta simulació utilitza un model simplificat (pèndol simple) i un mètode d'integració numèrica (Euler simple) que pot acumular errors.</li>
+                     <li>El model d'amortiment lineal i la força horitzontal sinusoidal són aproximacions útils per demostrar conceptes fonamentals.</li>
+                     <li>Per a angles grans, l'aproximació de pèndol simple (`sin(θ) ≈ θ`) no és vàlida, però la simulació utilitza l'equació completa amb `sin(θ)`.</li>
+                 </ul>
+                <p>
+                    <strong>Consells:</strong>
+                </p>
+                <ul>
+                    <li>Experimenta amb diferents valors.</li>
+                    <li>Per veure ressonància forta, posa un factor d'amortiment molt proper a 1 (p. ex., 0.999) i ajusta la freqüència de força prop de la freqüència natural calculada.</li>
+                    <li>Fes clic a Play/Pausa per congelar i observar.</li>
+                     <li>Reinicia per aplicar els nous valors.</li>
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button id="closeModalButton">Entesos</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        const pendulumCanvas = document.getElementById('pendulumCanvas');
+        const ctx = pendulumCanvas.getContext('2d');
+        const graphCanvas = document.getElementById('graphCanvas');
+        const graphCtx = graphCanvas.getContext('2d');
+        const kineticEnergyCanvas = document.getElementById('kineticEnergyCanvas');
+        const kineticEnergyCtx = kineticEnergyCanvas.getContext('2d');
+        const potentialEnergyCanvas = document.getElementById('potentialEnergyCanvas');
+        const potentialEnergyCtx = potentialEnergyCanvas.getContext('2d');
+        const resetButton = document.getElementById('resetButton');
+        const playPauseButton = document.getElementById('playPauseButton');
+        const infoButton = document.getElementById('infoButton'); // <-- New button reference
+        const lengthInput = document.getElementById('lengthInput');
+        const massInput = document.getElementById('massInput');
+        const angleInput = document.getElementById('angleInput');
+        const dampingInput = document.getElementById('dampingInput');
+        const forceAmplitudeInput = document.getElementById('forceAmplitudeInput'); // Amplitude input
+        const forceFrequencyInput = document.getElementById('forceFrequencyInput'); // Frequency input
+        const simulationStatus = document.getElementById('simulationStatus');
+        const infoModal = document.getElementById('infoModal');
+        const closeModalButton = document.getElementById('closeModalButton');
+        const modalCloseBtnSpan = document.getElementById('modalCloseBtn');
+        const body = document.querySelector('body');
+
+
+        // Modal Natural Frequency Calculation Elements
+        const gValueSpan = document.getElementById('g_value');
+        const lMValueSpan = document.getElementById('l_m_value');
+         const gValueTextSpan = document.getElementById('g_value_text');
+         const lMValueTextSpan = document.getElementById('l_m_value_text');
+        const naturalFrequencySpan = document.getElementById('natural_frequency');
+
+
+        // Physics constants (using SI units)
+        const G = 9.81; // Gravity in m/s²
+        const TIME_STEP = 0.02; // Time step for simulation in seconds (approx. 50 frames/sec)
+
+
+        // Simulation state variables
+        let pendulumLengthCm; // Length from input in cm
+        let pendulumLengthM; // Length converted to meters
+        let initialAngleDegrees; // Initial angle from input in degrees
+        let initialAngleRadians; // Initial angle converted to radians
+        let currentAngleRadians; // Current angle in radians
+        let angularVelocity = 0; // rad/s
+        let angularAcceleration = 0; // rad/s²
+        let damping; // Damping factor from input
+        let bobMassKg; // Mass from input in kg
+
+
+        // Forced pendulum variables
+        let forceAmplitude = 0; // Amplitude of external force in Newtons
+        let forceFrequencyHz = 0; // Frequency of external force in Hertz
+        let forceFrequencyOmega = 0; // Angular frequency of external force in rad/s (omega = 2*pi*f)
+
+
+        // Pendulum drawing parameters
+        let pivotX = pendulumCanvas.width / 2;
+        let pivotY = pendulumCanvas.height / 4;
+
+
+        // Graphing variables
+        const angleHistory = []; // Stores angle in radians (still useful for physics)
+        const displacementHistory = []; // Stores horizontal displacement in cm (for plotting)
+        const timeHistory = []; // Stores time in seconds
+        const kineticEnergyHistory = []; // Stores kinetic energy in Joules
+        const potentialEnergyHistory = []; // Stores potential Energy in Joules
+        // const totalEnergyHistory = []; // Optional: can be plotted
+        const timeWindow = 15; // Time window for graphs in seconds
+
+
+        let currentTime = 0; // Current simulation time in seconds
+
+
+        let simulationRunning = false; // Controls if physics update happens
+        let animationFrameId; // Stores the ID of the animation frame request
+        let isPaused = false; // Controls if user has explicitly paused/activated
+
+
+        // Constants for graph drawing
+        const GRAPH_PADDING_LEFT = 40;
+        const GRAPH_PADDING_RIGHT = 10;
+        const GRAPH_PADDING_TOP = 15;
+        const GRAPH_PADDING_BOTTOM = 25;
+        const GRAPH_PLOT_WIDTH = (graphCanvas.width - GRAPH_PADDING_LEFT - GRAPH_PADDING_RIGHT);
+        const GRAPH_PLOT_HEIGHT = (graphCanvas.height - GRAPH_PADDING_TOP - GRAPH_PADDING_BOTTOM);
+
+
+
+
+        function calculateNaturalFrequency() {
+             // Natural frequency (approx) for small angles: omega_0 = sqrt(g/L)
+             // Frequency in Hz: f_0 = omega_0 / (2*pi) = sqrt(g/L) / (2*pi)
+             if (pendulumLengthM > 0) {
+                 const naturalFrequencyHz = Math.sqrt(G / pendulumLengthM) / (2 * Math.PI);
+                 return naturalFrequencyHz.toFixed(2);
+             }
+             return 'N/A';
+        }
+
+
+        function readParameters() {
+            pendulumLengthCm = parseFloat(lengthInput.value);
+            pendulumLengthM = pendulumLengthCm / 100; // Convert cm to meters
+
+
+            initialAngleDegrees = parseFloat(angleInput.value);
+            initialAngleDegrees = Math.max(-179, Math.min(179, initialAngleDegrees)); // Clamp range
+            angleInput.value = initialAngleDegrees;
+            initialAngleRadians = initialAngleDegrees * Math.PI / 180;
+
+
+            damping = parseFloat(dampingInput.value);
+            damping = Math.max(0.9, Math.min(1, damping)); // Clamp damping
+            dampingInput.value = damping;
+
+
+            bobMassKg = parseFloat(massInput.value);
+            bobMassKg = Math.max(0.1, bobMassKg); // Ensure min mass
+             massInput.value = bobMassKg;
+
+
+            // Read forced pendulum parameters
+            forceAmplitude = parseFloat(forceAmplitudeInput.value);
+            forceAmplitude = Math.max(0, forceAmplitude); // Ensure magnitude is non-negative
+            forceAmplitudeInput.value = forceAmplitude;
+
+
+            forceFrequencyHz = parseFloat(forceFrequencyInput.value);
+             forceFrequencyHz = Math.max(0, forceFrequencyHz); // Ensure frequency is non-negative
+             forceFrequencyInput.value = forceFrequencyHz;
+            forceFrequencyOmega = 2 * Math.PI * forceFrequencyHz; // Convert Hz to rad/s
+
+
+             // Update modal text with current natural frequency info
+             if (naturalFrequencySpan && gValueSpan && lMValueSpan) {
+                  gValueSpan.textContent = G.toFixed(2);
+                  lMValueSpan.textContent = pendulumLengthM.toFixed(2);
+                  gValueTextSpan.textContent = G.toFixed(2);
+                  lMValueTextSpan.textContent = pendulumLengthM.toFixed(2);
+                  naturalFrequencySpan.textContent = calculateNaturalFrequency();
+             }
+        }
+
+
+        function resetSimulation() {
+            readParameters(); // Read current values from inputs
+            currentAngleRadians = initialAngleRadians; // Reset angle to initial
+            angularVelocity = 0;
+            angularAcceleration = 0;
+            angleHistory.length = 0;
+            displacementHistory.length = 0;
+            timeHistory.length = 0;
+            kineticEnergyHistory.length = 0;
+            potentialEnergyHistory.length = 0;
+             // totalEnergyHistory.length = 0;
+            currentTime = 0;
+            isPaused = false; // Start running after reset
+            simulationRunning = true; // Enable physics updates
+            updatePlayPauseButton(); // Update button text/color
+            updateSimulationStatus(); // Update status text
+
+
+            // Ensure the animation loop is running after reset
+            if (!animationFrameId) {
+                animate();
+            }
+        }
+
+
+        function togglePlayPause() {
+            isPaused = !isPaused;
+            simulationRunning = !isPaused; // Physics runs only if not paused
+            updatePlayPauseButton();
+            updateSimulationStatus();
+             // If we unpause, ensure the animation loop is requested
+            if (!isPaused && !animationFrameId) {
+                 animate();
+            }
+             // Note: If paused, animate() continues to run but updatePendulum() is skipped.
+             // This allows graphs/drawing to update based on already stored data.
+        }
+
+
+        function updatePlayPauseButton() {
+            if (isPaused) {
+                playPauseButton.textContent = "Activar";
+                playPauseButton.classList.remove('running');
+                playPauseButton.classList.add('paused');
+                playPauseButton.title = "Iniciar Simulació";
+            } else {
+                playPauseButton.textContent = "Parar";
+                playPauseButton.classList.remove('paused');
+                playPauseButton.classList.add('running');
+                 playPauseButton.title = "Pausar Simulació";
+            }
+        }
+
+
+        function updateSimulationStatus() {
+             simulationStatus.classList.remove('running', 'stopped', 'info');
+            if (infoModal.style.display !== 'none') {
+                 simulationStatus.textContent = "Informació mostrada";
+                 simulationStatus.classList.add('info');
+            } else if (isPaused) {
+                simulationStatus.textContent = "Simulació pausada";
+                simulationStatus.classList.add('stopped');
+            } else if (!simulationRunning && timeHistory.length > 0) {
+                 // Simulation stops only if force is 0 and it settled AND not explicitly paused
+                 simulationStatus.textContent = "Simulació aturada (estabilitzada)";
+                 simulationStatus.classList.add('stopped');
+             }
+            else {
+                simulationStatus.textContent = "Simulació en curs";
+                 simulationStatus.classList.add('running');
+            }
+        }
+
+
+        function drawPendulum() {
+            ctx.clearRect(0, 0, pendulumCanvas.width, pendulumCanvas.height);
+
+
+            // Bob position calculation
+            const bobX = pivotX + pendulumLengthCm * Math.sin(currentAngleRadians);
+            const bobY = pivotY + pendulumLengthCm * Math.cos(currentAngleRadians);
+
+
+            // Draw string
+            const stringGradient = ctx.createLinearGradient(pivotX, pivotY, bobX, bobY);
+            stringGradient.addColorStop(0, '#FFFFFF');
+            stringGradient.addColorStop(1, '#D3D3D3');
+            ctx.strokeStyle = stringGradient;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(pivotX, pivotY);
+            ctx.lineTo(bobX, bobY);
+            ctx.stroke();
+            ctx.closePath();
+
+
+            // Draw bob shadow
+            ctx.shadowColor = 'rgba(0, 0, 0, 0.6)';
+            ctx.shadowBlur = 20;
+            ctx.shadowOffsetX = 8;
+            ctx.shadowOffsetY = 8;
+
+
+            // Draw bob
+            ctx.beginPath();
+            ctx.arc(bobX, bobY, 25, 0, 2 * Math.PI);
+            const bobGradient = ctx.createRadialGradient(bobX, bobY, 10, bobX, bobY, 25);
+            bobGradient.addColorStop(0, '#FFA07A');
+            bobGradient.addColorStop(0.5, '#FF6347');
+            bobGradient.addColorStop(1, '#FF4500');
+            ctx.fillStyle = bobGradient;
+            ctx.fill();
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+            ctx.closePath();
+
+
+            // Clear shadow for subsequent drawings
+            ctx.shadowBlur = 0;
+            ctx.shadowOffsetX = 0;
+            ctx.shadowOffsetY = 0;
+
+
+            // Draw pivot point
+            ctx.beginPath();
+            ctx.arc(pivotX, pivotY, 7, 0, 2 * Math.PI);
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fill();
+            ctx.closePath();
+
+
+             // Optional: Draw horizontal force vector
+             if (forceAmplitude > 0) {
+                 const forceVectorLength = Math.min(50, forceAmplitude * 5); // Scale force magnitude for drawing
+                 // Determine the direction of the force based on the sign of sin(omega*t)
+                 const forceDirection = Math.sin(forceFrequencyOmega * currentTime) > 0 ? 1 : -1; // +1 for right, -1 for left
+
+
+                 // Calculate start and end points of the force vector (applied at the bob)
+                 const startX = bobX;
+                 const startY = bobY;
+                 const endX = startX + forceVectorLength * forceDirection;
+                 const endY = startY; // Horizontal force
+
+
+                 ctx.strokeStyle = '#FFFF00'; // Yellow color for force vector
+                 ctx.lineWidth = 2;
+                 ctx.beginPath();
+                 ctx.moveTo(startX, startY);
+                 ctx.lineTo(endX, endY);
+                 ctx.stroke();
+
+
+                 // Draw arrowhead
+                 const arrowLength = 15;
+                 const arrowWidth = 8;
+                 ctx.fillStyle = '#FFFF00';
+                 ctx.beginPath();
+                 if (forceDirection > 0) { // Pointing right
+                    ctx.moveTo(endX, endY);
+                    ctx.lineTo(endX - arrowLength, endY - arrowWidth / 2);
+                    ctx.lineTo(endX - arrowLength, endY + arrowWidth / 2);
+                 } else { // Pointing left
+                    ctx.moveTo(endX, endY);
+                    ctx.lineTo(endX + arrowLength, endY - arrowWidth / 2);
+                    ctx.lineTo(endX + arrowLength, endY + arrowWidth / 2);
+                 }
+                 ctx.closePath();
+                 ctx.fill();
+             }
+        }
+
+
+        function updatePendulum() {
+             // This function should only run if simulationRunning is true
+             if (!simulationRunning) return;
+
+
+            // Angular acceleration from gravity
+            let accelerationFromGravity = -G / pendulumLengthM * Math.sin(currentAngleRadians);
+
+
+            // Angular acceleration from external HORIZONTAL sinusoidal force
+            let accelerationFromForce = 0;
+            if (bobMassKg > 0 && pendulumLengthM > 0 && forceAmplitude > 0) {
+                 // Force is F_x(t) = forceAmplitude * sin(forceFrequencyOmega * currentTime)
+                 // Torque from horizontal force = F_x(t) * L * cos(theta)
+                 // Angular Acceleration = Torque / (m * L^2) = (F_x(t) * L * cos(theta)) / (m * L^2)
+                 // = (forceAmplitude * sin(forceFrequencyOmega * currentTime) / (m * L)) * cos(currentAngleRadians)
+                 accelerationFromForce = (forceAmplitude / (bobMassKg * pendulumLengthM)) * Math.sin(forceFrequencyOmega * currentTime) * Math.cos(currentAngleRadians);
+            }
+
+
+            // Total angular acceleration
+            angularAcceleration = accelerationFromGravity + accelerationFromForce;
+
+
+            // Apply acceleration to velocity (Euler integration)
+            angularVelocity += angularAcceleration * TIME_STEP;
+
+
+            // Apply damping (simplified velocity-dependent damping)
+            angularVelocity *= damping;
+
+
+            // Apply velocity to angle
+            currentAngleRadians += angularVelocity * TIME_STEP;
+
+
+            // Update time
+            currentTime += TIME_STEP;
+
+
+            // Store history data
+            angleHistory.push(currentAngleRadians);
+            // Calculate and store horizontal displacement in cm
+            const currentDisplacementCm = pendulumLengthM * Math.sin(currentAngleRadians) * 100; // m * sin(rad) * 100 -> cm
+            displacementHistory.push(currentDisplacementCm);
+            timeHistory.push(currentTime);
+
+
+            // Calculate energies (using SI units)
+            const velocity = angularVelocity * pendulumLengthM; // Tangential velocity in m/s
+            const kineticEnergy = 0.5 * bobMassKg * velocity * velocity; // Joules
+            kineticEnergyHistory.push(kineticEnergy);
+
+
+            // Potential energy relative to the lowest point (angle = 0)
+            const potentialEnergy = bobMassKg * G * pendulumLengthM * (1 - Math.cos(currentAngleRadians)); // Joules
+            potentialEnergyHistory.push(potentialEnergy);
+
+
+            // const totalEnergy = kineticEnergy + potentialEnergy; // Optional: for total energy plotting
+            // totalEnergyHistory.push(totalEnergy);
+
+
+            // Prune old data from history arrays based on desired time window length
+            // Max points = timeWindow / TIME_STEP
+            const maxDataPoints = Math.ceil(timeWindow / TIME_STEP);
+            while (timeHistory.length > maxDataPoints) {
+                timeHistory.shift();
+                angleHistory.shift();
+                displacementHistory.shift();
+                kineticEnergyHistory.shift();
+                potentialEnergyHistory.shift();
+                // totalEnergyHistory.shift();
+            }
+
+
+             // Check if pendulum has settled (only if no driving force)
+             // With driving force, it oscillates or reaches a steady state oscillation
+            if (forceAmplitude === 0 && Math.abs(angularVelocity) < 0.005 && Math.abs(angularAcceleration) < 0.005 && !isPaused) {
+                 simulationRunning = false; // Stops the physics update part of animate
+                 updateSimulationStatus(); // Update status text
+                 // Note: The animate loop *still runs* to update drawing, but physics doesn't advance.
+            }
+        }
+
+
+         // --- Graph Drawing Function ---
+         function drawGraph(canvas, context, dataHistory, title, yLabel, color, fixedMinValue, fixedMaxValue) {
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            context.fillStyle = '#F8F8F8';
+            context.fillRect(0, 0, canvas.width, canvas.height);
+
+
+            let minDataValue, maxDataValue, dataRange;
+
+
+             if (fixedMinValue !== undefined && fixedMaxValue !== undefined) {
+                 minDataValue = fixedMinValue;
+                 maxDataValue = fixedMaxValue;
+             } else if (dataHistory.length > 0) {
+                 minDataValue = Math.min(...dataHistory);
+                 maxDataValue = Math.max(...dataHistory);
+                 let currentRange = maxDataValue - minDataValue;
+                 if (currentRange === 0 && dataHistory.length > 0) {
+                      // Handle single point or flat line: make a small range around the value
+                      currentRange = Math.abs(dataHistory[0]) * 0.2 || 0.5; // Use 20% of value, or 0.5 if value is 0
+                      minDataValue -= currentRange / 2;
+                      maxDataValue += currentRange / 2;
+                 } else if (currentRange < 0.5 && dataHistory.length > 1) { // Ensure minimum range for visibility if not flat
+                     let avg = (minDataValue + maxDataValue) / 2;
+                     minDataValue = avg - 0.25;
+                     maxDataValue = avg + 0.25;
+                 } else if (currentRange === 0 && dataHistory.length === 0) {
+                     minDataValue = 0;
+                     maxDataValue = 1; // Default range if no data
+                 } else {
+                     let padding = currentRange * 0.1; // Add 10% padding
+                     minDataValue -= padding;
+                     maxDataValue += padding;
+                 }
+             } else {
+                 minDataValue = 0;
+                 maxDataValue = 1; // Default range if no data
+             }
+
+
+            dataRange = maxDataValue - minDataValue;
+            if (dataRange <= 0) dataRange = 1; // Prevent division by zero
+
+
+            // Draw grid lines
+            context.strokeStyle = '#EEEEEE';
+            context.lineWidth = 1;
+
+
+             const numHorizontalLines = 4;
+             for (let i = 0; i <= numHorizontalLines; i++) {
+                const yGrid = GRAPH_PADDING_TOP + i * (GRAPH_PLOT_HEIGHT / numHorizontalLines);
+                context.beginPath();
+                context.moveTo(GRAPH_PADDING_LEFT, yGrid);
+                context.lineTo(canvas.width - GRAPH_PADDING_RIGHT, yGrid);
+                context.stroke();
+             }
+
+
+            if (timeHistory.length > 1) {
+                const startTime = timeHistory[0];
+                const endTime = timeHistory[timeHistory.length - 1];
+                const totalTime = endTime - startTime;
+                const timeInterval = Math.max(0.5, Math.floor(timeWindow / 5)); // Grid every 0.5 or 1 or 2 seconds
+
+
+                // Draw vertical grid lines
+                // Start from the first time point that is greater than or equal to ceil(startTime / timeInterval) * timeInterval
+                 let firstGridTime = Math.ceil(startTime / timeInterval) * timeInterval;
+                 if (firstGridTime < startTime) firstGridTime += timeInterval;
+
+
+
+
+                 for (let t = firstGridTime; t <= endTime + TIME_STEP; t += timeInterval) {
+                     const xGrid = GRAPH_PADDING_LEFT + (t - startTime) / timeWindow * GRAPH_PLOT_WIDTH;
+                     // Ensure grid line is within the plot area bounds
+                     if (xGrid >= GRAPH_PADDING_LEFT && xGrid <= canvas.width - GRAPH_PADDING_RIGHT) {
+                         context.beginPath();
+                         context.moveTo(xGrid, GRAPH_PADDING_TOP);
+                         context.lineTo(xGrid, canvas.height - GRAPH_PADDING_BOTTOM);
+                         context.stroke();
+                     }
+                }
+            }
+
+
+            // Draw data line
+            context.beginPath();
+            context.strokeStyle = color;
+            context.lineWidth = 3;
+
+
+            if (timeHistory.length > 0 && dataHistory.length === timeHistory.length) {
+                const startTime = timeHistory[0];
+                // Ensure starting point is calculated correctly based on current data value
+                const startX = GRAPH_PADDING_LEFT;
+                const startY = GRAPH_PADDING_TOP + GRAPH_PLOT_HEIGHT - (dataHistory[0] - minDataValue) / dataRange * GRAPH_PLOT_HEIGHT;
+                context.moveTo(startX, startY);
+
+
+                for (let i = 1; i < dataHistory.length; i++) { // Start from 1 as move_to already set the first point
+                    const x = GRAPH_PADDING_LEFT + (timeHistory[i] - startTime) / timeWindow * GRAPH_PLOT_WIDTH;
+                    const y = GRAPH_PADDING_TOP + GRAPH_PLOT_HEIGHT - (dataHistory[i] - minDataValue) / dataRange * GRAPH_PLOT_HEIGHT;
+                    if (!isNaN(x) && !isNaN(y)) {
+                        context.lineTo(x, y);
+                    }
+                }
+            }
+            context.stroke();
+            context.closePath();
+
+
+            // Draw axes
+            context.strokeStyle = '#AAAAAA';
+            context.lineWidth = 1;
+
+
+            context.beginPath();
+            context.moveTo(GRAPH_PADDING_LEFT, GRAPH_PADDING_TOP);
+            context.lineTo(GRAPH_PADDING_LEFT, canvas.height - GRAPH_PADDING_BOTTOM); // Y-axis
+            context.moveTo(GRAPH_PADDING_LEFT, canvas.height - GRAPH_PADDING_BOTTOM);
+            context.lineTo(canvas.width - GRAPH_PADDING_RIGHT, canvas.height - GRAPH_PADDING_BOTTOM); // X-axis
+            context.stroke();
+            context.closePath();
+
+
+            // Draw labels
+            context.fillStyle = '#555555';
+            context.font = '10px Arial';
+
+
+            // X-axis label
+            context.textAlign = 'center';
+            context.textBaseline = 'top';
+            context.fillText('Temps (s)', GRAPH_PADDING_LEFT + GRAPH_PLOT_WIDTH / 2, canvas.height - GRAPH_PADDING_BOTTOM + 5);
+
+
+            // Y-axis label (rotated)
+            context.textAlign = 'right'; // Align text relative to the center point after rotation
+            context.textBaseline = 'middle';
+             context.save();
+             context.translate(15, GRAPH_PADDING_TOP + GRAPH_PLOT_HEIGHT / 2); // Position in the middle of the plot area vertically
+             context.rotate(-Math.PI / 2);
+             context.fillText(yLabel, 0, 0); // Draw label
+             context.restore();
+
+
+            // Y-axis tick values
+            context.font = '8px Arial';
+            context.textAlign = 'right';
+            context.textBaseline = 'bottom';
+             // Ensure min/max values are displayed even if data is flat
+             const displayMin = minDataValue.toFixed(2);
+             const displayMax = maxDataValue.toFixed(2);
+            context.fillText(displayMin, GRAPH_PADDING_LEFT - 5, canvas.height - GRAPH_PADDING_BOTTOM);
+            context.textBaseline = 'top';
+            context.fillText(displayMax, GRAPH_PADDING_LEFT - 5, GRAPH_PADDING_TOP);
+
+
+             // X-axis tick values
+             if (timeHistory.length > 0) {
+                const startTime = timeHistory[0];
+                const endTime = timeHistory[timeHistory.length - 1];
+                 const timeRange = endTime - startTime;
+
+
+                context.textAlign = 'left';
+                context.textBaseline = 'top';
+                 context.fillText(startTime.toFixed(1), GRAPH_PADDING_LEFT, canvas.height - GRAPH_PADDING_BOTTOM + 5);
+
+
+                if (timeHistory.length > 1 && timeRange > 0) {
+                     const numIntermediateLabels = 2; // Number of labels between start and end
+                     for(let i=1; i<=numIntermediateLabels; i++) {
+                         const labelTime = startTime + timeRange * (i / (numIntermediateLabels + 1));
+                         const labelX = GRAPH_PADDING_LEFT + GRAPH_PLOT_WIDTH * (i / (numIntermediateLabels + 1));
+                         context.textAlign = 'center';
+                         context.fillText(labelTime.toFixed(1), labelX, canvas.height - GRAPH_PADDING_BOTTOM + 5);
+                     }
+
+
+                    context.textAlign = 'right';
+                    context.fillText(endTime.toFixed(1), canvas.width - GRAPH_PADDING_RIGHT, canvas.height - GRAPH_PADDING_BOTTOM + 5);
+                } else if (timeHistory.length === 1) {
+                     context.textAlign = 'center';
+                     context.fillText(startTime.toFixed(1), GRAPH_PADDING_LEFT + GRAPH_PLOT_WIDTH / 2, canvas.height - GRAPH_PADDING_BOTTOM + 5);
+                }
+             }
+
+
+            // Current value display
+            context.fillStyle = '#333333';
+            context.font = '10px Arial';
+            context.textAlign = 'right';
+            context.textBaseline = 'top';
+            const currentValue = dataHistory.length > 0 ? dataHistory[dataHistory.length - 1] : 0;
+
+
+            // Always display currentValue to 2 decimal places
+            context.fillText(`${yLabel}: ${currentValue.toFixed(2)}`, canvas.width - GRAPH_PADDING_RIGHT, GRAPH_PADDING_TOP);
+
+
+            // Graph title
+            context.fillStyle = '#333333';
+            context.font = '13px Arial';
+            context.textAlign = 'center';
+            context.textBaseline = 'top';
+            context.fillText(title, canvas.width / 2, 5);
+        }
+
+
+        // --- Modal Functions ---
+        function showModal() {
+            infoModal.style.display = 'block';
+            body.classList.add('modal-open');
+            // Set simulation state while modal is open
+            simulationRunning = false; // Stop physics updates
+            isPaused = true;           // Mark as paused
+            updatePlayPauseButton(); // Update Play/Pause button state
+            updateSimulationStatus(); // Update status text to 'Info shown'
+             // Keep animation loop running to draw current state and update modal text
+             if (!animationFrameId) {
+                 animate();
+             }
+        }
+
+
+        function hideModal() {
+            infoModal.style.display = 'none';
+            body.classList.remove('modal-open');
+
+
+            // If simulation was running before the modal opened, resume it.
+            // If it was paused, keep it paused but allow drawing.
+            // If it was settled/stopped (no force & velocity/accel zero), reset it.
+            // We determine the state *before* the modal was opened indirectly.
+            // The `isPaused` flag tells us if the user *intended* to pause it.
+            // `simulationRunning` being false *before* opening the modal implies it settled or was stopped initially.
+
+
+            // Update status based on the state *after* closing the modal
+             // If not paused OR force amplitude is > 0 (implies it won't settle to a stop on its own)
+            if (!isPaused || forceAmplitude > 0) {
+                 simulationRunning = !isPaused; // Resume physics if not paused, otherwise keep physics stopped
+                 updateSimulationStatus(); // Status will become "running" or "paused"
+            } else if (timeHistory.length > 0) {
+                 // It was settled and no force, reset to clean state
+                 resetSimulation(); // This will set simulationRunning = true and start animation
+                 return; // Exit early, resetSimulation already handled animate
+            } else {
+                // It was paused manually with no force and little history, or reset without playing
+                 simulationRunning = false; // Keep physics stopped
+                 updateSimulationStatus(); // Status will be "paused" or "stopped" depending on how it was before
+            }
+             // Ensure animation loop is requested if it's not resetting
+             if (!animationFrameId) {
+                 animate();
+             }
+        }
+
+
+
+
+        // --- Event Listeners ---
+        resetButton.addEventListener('click', resetSimulation);
+        playPauseButton.addEventListener('click', togglePlayPause);
+        infoButton.addEventListener('click', showModal); // <-- New event listener
+
+
+        // Use 'input' event to update parameters and potentially graph scales live
+        // But reset is needed to apply them to the simulation physics itself
+        lengthInput.addEventListener('input', readParameters);
+        massInput.addEventListener('input', readParameters);
+        angleInput.addEventListener('input', readParameters);
+        dampingInput.addEventListener('input', readParameters);
+        forceAmplitudeInput.addEventListener('input', readParameters);
+        forceFrequencyInput.addEventListener('input', readParameters);
+
+
+
+
+        closeModalButton.addEventListener('click', hideModal);
+        modalCloseBtnSpan.addEventListener('click', hideModal);
+
+
+        window.addEventListener('click', (event) => {
+            // Close modal if clicked outside the modal content area
+            if (event.target === infoModal) {
+                hideModal();
+            }
+        });
+         // Prevent modal content clicks from closing the modal
+         const modalContent = infoModal.querySelector('.modal-content');
+         if (modalContent) {
+            modalContent.addEventListener('click', (event) => {
+                 event.stopPropagation();
+            });
+         }
+
+
+        window.addEventListener('load', () => {
+            readParameters(); // Read initial parameters on load
+            showModal(); // Show modal on load using the new function
+             // The animation loop starts with the initial animate() call below.
+             // showModal/hideModal ensure the loop continues if needed.
+        });
+
+
+        function animate() {
+            // Request the next frame FIRST, ensures smooth animation loop
+            animationFrameId = requestAnimationFrame(animate);
+
+
+            if (simulationRunning) { // Only update physics if running
+                updatePendulum();
+            }
+
+
+            drawPendulum(); // Always draw the current state
+
+
+            // --- Graph Drawing ---
+            // For Amplitude graph, draw horizontal displacement in cm
+            // Auto-scaling min/max based on displacementHistory is sufficient.
+            drawGraph(graphCanvas, graphCtx, displacementHistory, 'Amplitud vs Temps', 'Amplitud (cm)', '#0056b3');
+
+
+            // Y-axis scale for energy graphs: based on max energy seen so far, with margin
+            let maxEnergySeen = 0;
+            if (kineticEnergyHistory.length > 0) maxEnergySeen = Math.max(maxEnergySeen, Math.max(...kineticEnergyHistory));
+            if (potentialEnergyHistory.length > 0) maxEnergySeen = Math.max(maxEnergySeen, Math.max(...potentialEnergyHistory));
+            // Calculate initial potential energy (kinetic is 0 at start)
+            // This ensures the initial graph scale is reasonable even with 0 force
+            // Only calculate if mass and length are valid
+            let initialPotentialEnergy = 0;
+             if (bobMassKg > 0 && pendulumLengthM > 0) {
+                 initialPotentialEnergy = bobMassKg * G * pendulumLengthM * (1 - Math.cos(initialAngleRadians));
+             }
+            maxEnergySeen = Math.max(maxEnergySeen, initialPotentialEnergy);
+
+
+
+
+            // Add margin to the max value for scaling, ensuring a minimum display range
+            const fixedEnergyMax = (maxEnergySeen > 0 ? maxEnergySeen * 1.2 : 10); // Use max seen + 20% margin, minimum 10J
+            const fixedEnergyMin = 0; // Energy is always non-negative (relative to min potential energy)
+
+
+
+
+            drawGraph(kineticEnergyCanvas, kineticEnergyCtx, kineticEnergyHistory, 'Energia Cinètica vs Temps', 'E_k (J)', '#c85d12', fixedEnergyMin, fixedEnergyMax);
+            drawGraph(potentialEnergyCanvas, potentialEnergyCtx, potentialEnergyHistory, 'Energia Potencial vs Temps', 'E_p (J)', '#28a745', fixedEnergyMin, fixedEnergyMax);
+            // Optional: Draw Total Energy
+            // drawGraph(totalEnergyCanvas, totalEnergyCtx, totalEnergyHistory, 'Energia Total vs Temps', 'E_tot (J)', '#6f42c1', fixedEnergyMin, fixedEnergyMax + fixedEnergyMax * 0.1); // Add a bit more margin for total energy
+
+
+             // Update natural frequency text in modal *if* it's visible
+             if (infoModal.style.display !== 'none') {
+                  // readParameters() is called by showModal/hideModal and input handlers,
+                  // so the values should be reasonably up-to-date.
+                  // Just ensure the text is updated in the modal element.
+                   if (naturalFrequencySpan && gValueSpan && lMValueSpan) {
+                      gValueSpan.textContent = G.toFixed(2);
+                      lMValueSpan.textContent = pendulumLengthM.toFixed(2);
+                      gValueTextSpan.textContent = G.toFixed(2);
+                      lMValueTextSpan.textContent = pendulumLengthM.toFixed(2);
+                      naturalFrequencySpan.textContent = calculateNaturalFrequency();
+                 }
+             }
+        }
+
+
+        // Start the animation loop *once* initially. Physics updates are controlled by simulationRunning.
+        animate();
+
+
+
+
+    </script>
+</body>
+</html>
+
